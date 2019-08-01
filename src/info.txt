@@ -1,0 +1,1600 @@
+==============================
+= SMS Chip-8 interpreter 0.21=
+==============================
+
+  by Maxim in 2002 and 2005
+
+   Ñ  Return to the menu
+   Ç  Stop scrolling
+   É  Scroll faster
+
+What is Chip-8 anyway?
+======================
+
+Back in the late 70s and early
+80s, there were some small
+computers, both manufactured
+and home-made, for which a
+language was invented which
+was suitable for writing very
+small games for very small
+computers - there are less
+than 40 instructions for
+everything ( processing,
+memory, sound, graphics and
+input) and a game can be
+written in under 200 bytes.
+
+Many years later, Chip-8 was
+revived as a game programming
+language for the HP48
+calculator, as an interpreter
+was written and then people
+could play and write games
+easily. This inspired "Super-
+Chip", with enhanced
+capabilities.
+
+What's Chip-8 capable of then?
+==============================
+
+Well... you have a screen. It's
+a whopping 64 by 32 pixels.
+Each pixel is 1-bit. You have
+sound - it's either on or it's
+off. You have input, and
+plenty of it - a 16-key pad.
+You have 16 registers and 4KB
+of RAM, which contains the
+interpreter, program and data.
+And a 16-level stack. It has a
+built-in font for displaying
+hexadecimal numbers, and you
+can make your own sprites. It
+can generate random numbers,
+and has sprite collision
+detection.
+
+Super-Chip doubles the
+resolution and adds some
+scrolling commands. However,
+it is not supported by this
+interpreter.
+
+Why no Super-Chip?
+==================
+
+Because there is, in fact, no
+easy way to do it with the
+SMS's graphics capabilities.
+While I can use tiles to
+display 2x2 Chip-8 pixels per
+tile (there are 2^4=16
+permutations), doing the same
+for Super-Chip, with 4x4
+pixels per tile, would need
+2^16=65536 different tiles.
+The SMS only has 450 or so...
+
+What games are there?
+=====================
+
+There are lots of Pong-style
+games as the system can do
+them quite easily, but there
+are also some other nice games.
+Look at the list at the main
+menu. I like:
+
+Å Syzygy
+Å Blitz
+Å Tetris
+Å Pong
+
+Controls
+========
+
+Obviously the SMS can't easily
+control all 16 input keys at
+once. So, for each game, the
+joypads' buttons are mapped to
+the appropriate keys, and each
+game shows its controls in the
+menu.
+
+There are two Chip-8 games
+which require more keys than
+the SMS can easily provide;
+they're not included.
+
+Graphics
+========
+
+Press Button 2 on the title
+screen to change the graphic
+style. The styles are:
+
+Å Old TV game
+Å LCD
+Å Shadowed dots
+Å Grid with green squares
+Å Checked
+Å Scanlines
+
+Several of these are a bit
+crappy, I just drew whatever
+came into my mind. If anyone
+thinks they can do better then
+show me!
+
+Sound
+=====
+
+At least I made it quiet.
+
+Speed
+=====
+
+The SMS is more than capable
+of interpreting Chip-8 games.
+The speed has been throttled
+down to a reasonably fast and
+playable speed. It's a bit
+faster than the Dos
+interpreter I tried, but I
+think it's better. Some games
+are very fast, but you can
+easily get used to it. I
+recommend you play on a 50Hz
+system for the best balance.
+Or just change the speed in an
+emulator to whatever you like
+best.
+
+Credits
+=======
+
+Å www.goldroad.co.uk for
+  suggesting Chip-8 as a simple
+  "emulation" project
+Å David Winter for CHIP8 and
+  the comprehensive
+  documentation and
+  information it includes, and
+  his various Chip-8 tools
+  like the disassembler
+Å Cowgod for his Chip-8
+  Technical Reference which is
+  a useful fast reference
+Å All the people whose game
+  packs I collated, and the
+  original game authors
+
+
+
+
+
+
+
+
+
+
+
+
+
+OK, I can't think of anything
+more to write.
+Oh yes, I can :P
+
+
+
+
+
+
+
+
+
+
+
+
+This program is dedicated to
+Michelle :D
+
+
+
+
+
+
+
+
+
+
+
+
+
+OK, if you forgot, press 1 to
+get back to the menu.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Do you think if you wait you
+might get to see a secret
+message?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Maybe you will...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+I can play this game all day,
+you know...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Hey, you didn't cheat and
+increase the frameskip,
+did you?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+You know, you could always
+just open the rom in a hex
+editor, or even Notepad, and
+read all this. It's stored as
+ASCII.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+You know what?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+I think there isn't any secret
+message!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Oh, I thought of something...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+I didn't say "hi" to Bock yet.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Hi Bock!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+And Heliophobe and Charles and
+Eric and Mike and Steve and...
+well, all those guys.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+And now for something
+completely different.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Way down deep in the middle of
+  the Congo,
+A hippo took an apricot, a
+  guava and a mango,
+He stuck it with the others
+  and danced a dainty tango,
+The rhino said, "I know, we'll
+  call it Um Bongo"
+
+[chorus]
+Um Bongo, Um Bongo, they drink
+  it in the Congo
+
+The python picked the
+  passionfruit, the marmoset
+  the mandarin
+The parrot painted packets
+  that the whole caboodle
+  landed in
+So when it comes to sun and
+  fun and goodness in the
+  jungle
+We all prefer the sunny, funny
+  one they call Um Bongo
+
+Um Bongo, Um Bongo, they drink
+  it in the Congo
+[repeat until fade]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Now, that will most likely
+mean nothing to most of you,
+just the British among you. So
+that's all very nice.
+
+
+
+
+Not much space left now...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Time for a secret message to
+Michelle:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Ni wen wo ai ni you duo shen
+Wo ai ni you ji fen
+
+Wo de qing ye zhen
+Wo de ai ye zhen
+Yue liang dai biao wo de xin
+
+Wo de qing bu yi
+Wo de ai bu bian
+Yue liang dai biao wo de xin
+
+Qing qing de yi ge wen
+Yi jin da dong wo de xin
+Shen shen de yi duan qing
+Jiao wo si nian dao ru jin
+
+Ni qu xiang yi xiang
+Ni qu kan yi kan
+Yue liang dai biao wo de xin
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+OK, that's it. It seems there
+was no secret message after
+all. What a disappointment!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Ah, time to chill out, relax,
+forget about life I think. Bye
+now! See you all in 2006!
+
+
+
+
+And now...
+.........
+........
+.......
+......
+.....
+....
+...
+..
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+Changelog:
+
+New in version 0.11: fixed
+typos and text display engine
+(I keep getting CR and LF
+mixed up, 10/13/0a/0d/#!*$)
+because I'm releasing it
+properly with source.
+
+New in version 0.2:
+Å Improved random number
+  generator
+Å Improved display
+Å Improved unused register
+  bits handling
+Å Changed secret text
+Å Added new games!
+
+New in version 0.21:
+
+Å Fixed a control definition
+  error making Filter and
+  Guess unplayable
+
+
