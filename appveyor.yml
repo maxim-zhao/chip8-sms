@@ -1,0 +1,14 @@
+version: 0.22.{build}
+build_script:
+- cmd: |-
+    appveyor DownloadFile https://github.com/maxim-zhao/sms-build-tools/releases/download/1.0.48/tools.7z
+    7z x tools.7z -otools
+    path %path%;%cd%\tools
+
+    cd src
+    assets.cmd
+    compile.bat chip8.sms.asm
+    7z a ..\chip8.zip chip8.sms ..\readme.md
+artifacts:
+- path: '*.zip'
+ 
