@@ -11,24 +11,22 @@
 ; chunks in the first 32KB.
 ;==============================================================
 .memorymap
-DEFAULTSLOT 0
-SLOTSIZE $8000
-SLOT 0 $0000
-SLOTSIZE $4000
-SLOT 1 $8000
-.ENDME
-.ROMBANKMAP
-BANKSTOTAL 1
-BANKSIZE $8000
-BANKS 1
-;BANKSIZE $4000
-;BANKS 1
-.ENDRO
+defaultslot 0
+slotsize $8000
+slot 0 $0000
+slotsize $4000
+slot 1 $8000
+.endme
+.rombankmap
+bankstotal 1
+banksize $8000
+banks 1
+.endro
 
 ;==============================================================
 ; SDSC tag and SMS rom header
 ;==============================================================
-.sdsctag 0.21,"SMS Chip-8 interpreter",SDSCNotes,"Maxim"
+.sdsctag 0.22,"SMS Chip-8 interpreter",SDSCNotes,"Maxim"
 
 ;==============================================================
 ; Memory usage
@@ -62,7 +60,7 @@ ScreenBuffer    ds 32*16*2
 ;==============================================================
 ; Boot section
 ;==============================================================
-.section "!Boot section" FORCE   ; Standard stuff (for the SMS anyway)
+.section "!Boot section" force   ; Standard stuff (for the SMS anyway)
     di              ; disable interrupts (re-enable later)
     im 1            ; Interrupt mode 1
     jp main         ; jump to main program
@@ -72,15 +70,20 @@ ScreenBuffer    ds 32*16*2
 ;==============================================================
 ; Pause button handler
 ;==============================================================
-.section "!NMI handler" FORCE
+.section "NMI handler" force
     ; Set reset flag
     push af
-        ld a,1
-        ld (ResetFlag),a
+      ld a,1
+      ld (ResetFlag),a
     pop af
     retn
 .ends
 
+.section "ZX7"
+.define ZX7ToVRAM
+.define ZX7ToVRAMScreenOn
+.include "ZX7 decompressor.asm"
+.ends
 
 ;==============================================================
 ; Main program
@@ -103,27 +106,20 @@ main:
 
     ; Load palette
     ld hl,PaletteData
-    ld b,(PaletteDataEnd-PaletteData)
+    ld b,_sizeof_PaletteData
     ld c,0
     call LoadPalette
 
     ; Load tiles
-    ld hl,0
-    ld ix,Font
-    ld bc,95
-    ld d,3
-    call LoadTiles
-    ld hl,96
-    ld ix,ControlIcons
-    ld bc,6
-    ld d,3
-    call LoadTiles
+    ld hl,Graphics
+    ld de,$4000
+    call zx7_decompress
 
-    ld a,0
+    xor a
     ld (TileType),a
     ld (GameNumber),a
 
-    ResetPoint:
+ResetPoint:
     call TurnOffScreen
 
     ; Set sound tone and turn it off
@@ -135,6 +131,7 @@ main:
     out ($7f),a
 
     call TitleScreen
+
     call ClearNameTable
 
     ; To do: better border for C8 screen
@@ -145,15 +142,15 @@ main:
 .if debug == 1
     jp +
     DebugLabels1:
-    .db "Inst:xxxx DT:xx ST:xx Ran#:xxxx",10
-    .db "0:xx 1:xx 2:xx 3:xx 4:xx 5:xx",10
-    .db "6:xx 7:xx 8:xx 9:xx A:xx B:xx",10
-    .db "C:xx D:xx E:xx F:xx",10
+    .asc "Inst:xxxx DT:xx ST:xx Ran#:xxxx",10
+    .asc "0:xx 1:xx 2:xx 3:xx 4:xx 5:xx",10
+    .asc "6:xx 7:xx 8:xx 9:xx A:xx B:xx",10
+    .asc "C:xx D:xx E:xx F:xx",10
     .db 0
     DebugLabels2:
-    .db "Inp:xxxx Last:xxxx Diff:xxxx",10
+    .asc "Inp:xxxx Last:xxxx Diff:xxxx",10
     .db 0
-  +:ld iy,NameTableAddress
++:  ld iy,NameTableAddress
     ld hl,DebugLabels1
     call WriteASCII
     ld iy,NameTableAddress+2*32*20
@@ -183,7 +180,7 @@ main:
     ld hl,0
     ld (C8Input),hl
 
-    ld a,0
+    xor a
     ld (C8DelayTimer),a
     ld (C8SoundTimer),a
     ld (ResetFlag),a
@@ -191,7 +188,7 @@ main:
     ; Zero registers
     ld b,16
     ld hl,C8Registers
-  -:ld (hl),a
+-:  ld (hl),a
     inc hl
     dec b
     jp nz,-
@@ -235,12 +232,12 @@ main:
     ld (GameControlMap),hl
 
 .if debug == 1
- --:ld b,1 ; opcodes per timeslice
+--: ld b,1 ; opcodes per timeslice
 .else
- --:ld b,11 ; opcodes per timeslice - change to a per-game setting (plus PAL?)?
+--: ld b,11 ; opcodes per timeslice - change to a per-game setting (plus PAL?)?
 .endif
-  -:push bc
-        call DecodeChip8
+-:  push bc
+      call DecodeChip8
     pop bc
     dec b
     jp nz,-
@@ -253,7 +250,7 @@ main:
     cp $00
     jp z,+
     dec a
-  +:ld (C8DelayTimer),a
++:  ld (C8DelayTimer),a
 
     ld a,(C8SoundTimer)
     cp $00
@@ -264,12 +261,12 @@ main:
     ld a,%10011000  ; sound on
     jp ++
 
-  +:ld a,%10011111  ; sound off
++:  ld a,%10011111  ; sound off
 
- ++:out ($7f),a
+++: out ($7f),a
 
 .if debug == 1
-    .db "Inst:xxxx DT:xx ST:xx Ran#:xxxx"
+    .asc "Inst:xxxx DT:xx ST:xx Ran#:xxxx"
     ld hl,NameTableAddress+2*13
     call VRAMToHL
     ld a,(C8DelayTimer)
@@ -282,7 +279,7 @@ main:
     call VRAMToHL
     ld b,16
     ld hl,C8Registers
-    -:
+-:
     ld a,(hl)
     call WriteNumber
     in a,($be)
@@ -297,11 +294,11 @@ main:
     jp z,+
     jp nc,---
     jp ++
-  +:in a,($be)
++:  in a,($be)
     in a,($be)
     in a,($be)
     in a,($be)
- ++:inc hl
+++: inc hl
     dec b
     jp nz,-
 .endif
@@ -321,10 +318,10 @@ ProcessInput:
     jp z,+
     ld a,1
     ld (ResetFlag),a
-    +:
++:
     ; Check if a reset is needed
     ld a,(ResetFlag)
-    cp 0
+    or a
     jp nz,ResetPoint  ; jump to main program start
 
     ; so hl = GG-R21RLDU21RLDU
@@ -334,7 +331,7 @@ ProcessInput:
     ld c,12  ; how many bits to look at
     ld ix,(GameControlMap)
     ld de,0 ; input summation
-    -:
+-:
     bit 0,l ; Is lowest bit set = this key is pressed
     jp z,+  ; Jump ahead if it isn't
 
@@ -345,7 +342,7 @@ ProcessInput:
     or e
     ld e,a
 
-    +:
++:
     srl h
     rr l    ; shift so next bit is in position 0
     inc ix
@@ -369,12 +366,11 @@ ProcessInput:
 .section "Title screen" SEMIFREE
 TitleScreen:
     call ClearNameTable
-    ld b,16
-    ld c,8
-    ld ix,LogoTileNums
-    ld iy,NameTableAddress+2*8
-    ld h,1
-    call DrawImageBytes
+    ld b,16 ; w
+    ld c,8 ; h
+    ld ix,LogoTilemap ; source
+    ld iy,NameTableAddress+2*8 ; dest
+    call DrawTilemap
 
     ld iy,NameTableAddress+2*32*10+2
     ld hl,TileScreenText
@@ -394,7 +390,7 @@ TitleScreen:
     ld (TileType),a
     call _NextTiles     ; Load tile set
 
-    -:  ; Title screen wait loop
+-:  ; Title screen wait loop
     call WaitForVBlankNoInt ; slow it down a bit
     call _DrawGameInfo
 
@@ -408,7 +404,7 @@ TitleScreen:
     jp z,- ; If not, repeat
     ; If so, wait for all keys to be lifted
     push af
- --:in a,($dc)
+--: in a,($dc)
     and %00111111
     cp  %00111111
     jp nz,--
@@ -420,30 +416,27 @@ TitleScreen:
     bit 2,a ; Left
     jp nz,+
     push af
-        ld a,(GameNumber)
-        dec a
-        cp -1
-        jp nz,++
-        ld a,NumGames
-        dec a
-        ++:
-        ld (GameNumber),a
+      ld a,(GameNumber)
+      dec a
+      cp -1
+      jp nz,++
+      ld a,NumGames
+      dec a
+++:   ld (GameNumber),a
     pop af
 
-  +:bit 3,a ; Right
++:  bit 3,a ; Right
     jp nz,+
     push af
-        ld a,(GameNumber)
-        inc a
-        cp NumGames
-        jp nz,++
-        ld a,0
-        ++:
-        ld (GameNumber),a
+      ld a,(GameNumber)
+      inc a
+      cp NumGames
+      jp nz,++
+      xor a
+++:   ld (GameNumber),a
     pop af
 
-  +:
-    bit 1,a ; Down
++:  bit 1,a ; Down
     jp z,TextScroller
 
     bit 4,a ; Loop if button 1 not pressed
@@ -461,7 +454,7 @@ TitleScreen:
     or l
     jp nz,+
     ld l,1
-  +:ld (C8RandomSR),hl
++:  ld (C8RandomSR),hl
     ret
 
 ; TitleScreen loop uses a,hl
@@ -469,28 +462,28 @@ TitleScreen:
 _DrawGameInfo:
     push af
     push hl
-        ; Clear game text area (5 lines)
-        ld hl,NameTableAddress+2*(32*19)
-        call VRAMToHL
-        ld bc,5*32*2
-      -:ld a,0
-        out ($be),a
-        dec bc
-        ld a,b
-        or c
-        jp nz,-
+      ; Clear game text area (5 lines)
+      ld hl,NameTableAddress+2*(32*19)
+      call VRAMToHL
+      ld bc,5*32*2
+-:    xor a
+      out ($be),a
+      dec bc
+      ld a,b
+      or c
+      jp nz,-
 
-        ld a,(GameNumber)   ; See which game we want
-        ; Get its associated text
-        ld c,a
-        sla c
-        ld b,0
-        ld ix,GameText
-        add ix,bc
-        ld h,(ix+1)
-        ld l,(ix+0) ; hl = location of text
-        ld iy,NameTableAddress+2*(32*19)+2
-        call WriteASCII
+      ld a,(GameNumber)   ; See which game we want
+      ; Get its associated text
+      ld c,a
+      sla c
+      ld b,0
+      ld ix,GameText
+      add ix,bc
+      ld h,(ix+1)
+      ld l,(ix+0) ; hl = location of text
+      ld iy,NameTableAddress+2*(32*19)+2
+      call WriteASCII
     pop hl
     pop af
     ret
@@ -498,54 +491,66 @@ _DrawGameInfo:
 _NextTiles:
     push af
     push hl
-        ld a,(TileType)
-        inc a
-        cp NumTileSets
-        jp nz,+
-        ld a,0
-      +:ld (TileType),a
-        ; a = new tile set number
-        sla a   ; *2
-        ld ix,TileSets
-        ld c,a
-        ld b,0
-        add ix,bc   ; ix now points to the pointer to the tileset
-        ld h,(ix+1)
-        ld l,(ix+0) ; hl now points to the tileset I want
+      ld a,(TileType)
+      inc a
+      cp NumTileSets
+      jp nz,+
+      xor a
++:    ld (TileType),a
+      ; a = new tile set number
+      sla a   ; *2
+      ld ix,TileSets
+      ld c,a
+      ld b,0
+      add ix,bc   ; ix now points to the pointer to the tileset
+      ld h,(ix+1)
+      ld l,(ix+0) ; hl now points to the tileset I want
 
-        ; Set address $2000 (256x32), or $4000 for write flag -> $6000
-        ld a,$00
-        out ($bf),a
-        ld a,$60
-        out ($bf),a
-        ; Pause for 28 cycles before each write
-        nop
-        nop
-        nop
-        ; I need to output c bytes to $be, starting at hl
-        ld bc,16*32     ; 10
-        -:
-            ld a,(hl)   ; 7
-            out ($be),a
-            dec bc      ; 4
-            inc hl      ; 6
-            ld a,b      ; 4
-            or c        ; 4
-            jp nz,-     ; 10
+      ; Set address $2000 (256x32), or $4000 for write flag -> $6000
+      xor a
+      out ($bf),a
+      ld a,$60
+      out ($bf),a
+      ; Pause for 28 cycles before each write
+      nop
+      nop
+      nop
+      ; I need to output c bytes to $be, starting at hl
+      ld bc,16*32
+-:    ld a,(hl)
+      out ($be),a
+      dec bc
+      inc hl
+      ld a,b
+      or c
+      jp nz,-
     pop hl
     pop af
     ret
 
+; I want to store text as ASCII but I also want to use nicer (sort of) chars for the button key images here.
+; Thus I will use .asciitable to map the chars for those but leave the ASCII unchanged.
+
+.asciitable
+map " " to "~" = 32
+map "«" = 127
+map "»" = 128
+map "´" = 129
+map "¸" = 130
+map "¹" = 131
+map "²" = 132
+.enda
+
 TileScreenText:
 ;    12345678901234567890123456789012
-.db "Controls:",10
-.db "„  Play",10
-.db "…  Change screen style",10
-.db "€ Change game",10
-.db "ƒ  Read about Chip-8",10,10
-.db "Press Pause or Reset in-game",10
-.db "to return to this menu"
-.db 0
+.asc "Controls:",10
+.asc "¹  Play",10
+.asc "²  Change screen style",10
+.asc "«» Change game",10
+.asc "¸  Read about Chip-8",10,10
+.asc "Press Pause or Reset in-game",10
+.asc "to return to this menu"
+.asc 0
 
 .ends
 
@@ -553,22 +558,21 @@ TileScreenText:
 ScreenBufferToScreen:
     push bc
     push hl
-        ld hl,NameTableAddress+2*32*4
-        call VRAMToHL
+      ld hl,NameTableAddress+2*32*4
+      call VRAMToHL
 
-        ; hl = where to copy from
-        ; Output to $be
-        ; Output $400 bytes
-        ld hl,ScreenBuffer
-        ld bc,$400
-        -:
-          ld a,(hl)       ; 7
-          out ($be),a
-          dec bc          ; 6
-          ld a,b          ; 4
-          or c            ; 4
-          inc hl          ; 6
-          jp nz,-         ; 10 - total 37, plenty
+      ; hl = where to copy from
+      ; Output to $be
+      ; Output $400 bytes
+      ld hl,ScreenBuffer
+      ld bc,$400
+-:    ld a,(hl)       ; 7
+      out ($be),a
+      dec bc          ; 6
+      ld a,b          ; 4
+      or c            ; 4
+      inc hl          ; 6
+      jp nz,-         ; 10 - total 37, plenty
     pop hl
     pop bc
     ret
@@ -614,17 +618,17 @@ DecodeChip8:
 RegInHL:    ; pass reg no. in low nibble of a, returns its location in hl
     and $0f
     push de
-        ld d,0
-        ld e,a
-        ld hl,C8Registers
-        add hl,de
+      ld d,0
+      ld e,a
+      ld hl,C8Registers
+      add hl,de
     pop de
     ret
 
 GetRegValue ; pass reg no. in low nibble of a, returns its value in a
     push hl
-        call RegInHL
-        ld a,(hl)
+      call RegInHL
+      ld a,(hl)
     pop hl
     ret
 
@@ -632,15 +636,14 @@ ClearScreen:
     ld de,$100          ; value
     ld iy,ScreenBuffer  ; where
     ld bc,512           ; how many
-    --:                 ; for some reason, using -: here kept giving the wrong position
-    ld (iy+1),d
+-:  ld (iy+1),d
     ld (iy+0),e
     inc iy
     inc iy
     dec bc
     ld a,b
     or c
-    jp nz,--
+    jp nz,-
     ret
 
 ; Instruction handlers:
@@ -654,21 +657,21 @@ C80:    ; SYS/CLS/RET
     cp $ee
     jp z,_RET
     jp DecodeFinished
-    _CLS:
-        ; Clear screen
-        call ClearScreen
-        jp DecodeFinished
-    _RET:
-        ; Return after CALL
-        ld iy,(C8SP); Get stack pointer
-        dec iy      ; - Decrease it
-        dec iy      ; /
-        ld (C8SP),iy; Store it again
-        ld h,(iy+1) ; - Get call location
-        ld l,(iy+0) ; /
-        push hl     ; - Put that in ix
-        pop ix      ; /
-        jp DecodeFinished
+_CLS:
+    ; Clear screen
+    call ClearScreen
+    jp DecodeFinished
+_RET:
+    ; Return after CALL
+    ld iy,(C8SP); Get stack pointer
+    dec iy      ; - Decrease it
+    dec iy      ; /
+    ld (C8SP),iy; Store it again
+    ld h,(iy+1) ; - Get call location
+    ld l,(iy+0) ; /
+    push hl     ; - Put that in ix
+    pop ix      ; /
+    jp DecodeFinished
 
 C81:    ; JP    1nnn    Jump to nnn
     and $0f         ; - Get 0n in d
@@ -694,19 +697,19 @@ C83:    ; SE    3rnn    Skip next instruction if vr == nn
 
     ld a,(hl)
     cp (ix+1)
-    jp nz,+
+    jp nz,DecodeFinished
     inc ix      ; If it is equal then inc ix twice
     inc ix
-  +:jp DecodeFinished
+    jp DecodeFinished
 
 C84:    ; SNE   4rnn    Skip next instruction if vr != nn
     call RegInHL
     ld a,(hl)
     cp (ix+1)
-    jp z,+
+    jp z,DecodeFinished
     inc ix      ; If it is not equal then inc ix twice
     inc ix
-  +:jp DecodeFinished
+    jp DecodeFinished
 
 C85:    ; SE    5xy0    Skip next instruction if vx == vy
     call RegInHL
@@ -720,10 +723,10 @@ C85:    ; SE    5xy0    Skip next instruction if vx == vy
     call RegInHL
     ld a,(hl)
     cp b                ; compare with vx
-    jp nz,+
+    jp nz,DecodeFinished
     inc ix              ; skip next instruction if it is not equal
     inc ix
-  +:jp DecodeFinished
+    jp DecodeFinished
 
 C86:    ; LD    6rnn    load vr with value nn
     call RegInHL
@@ -754,85 +757,85 @@ C88:    ; Operations (lots of them)
     srl a
     srl a
     push hl ; pop it at OperationEnd
-    call RegInHL
-    ld c,(hl)   ; c = vy
+      call RegInHL
+      ld c,(hl)   ; c = vy
 
-    ld a,(C8Registers+$f)   ; Load vf
-    ld d,a
-    ld a,(ix+1)
-    and $0f     ; Which operation?
-    ld iy,C88Operations
-    WhichOpLoop:
-        cp 0        ; Is it 0?
-        jp nz,+
-        ld h,(iy+1) ; If so, jump to that operation
-        ld l,(iy+0)
-        jp (hl)
-      +:dec a       ; Otherwise, dec a and inc iy twice
-        inc iy
-        inc iy
-        jp WhichOpLoop
+      ld a,(C8Registers+$f)   ; Load vf
+      ld d,a
+      ld a,(ix+1)
+      and $0f     ; Which operation?
+      ld iy,C88Operations
+WhichOpLoop:
+      or a        ; Is it 0?
+      jp nz,+
+      ld h,(iy+1) ; If so, jump to that operation
+      ld l,(iy+0)
+      jp (hl)
++:    dec a       ; Otherwise, dec a and inc iy twice
+      inc iy
+      inc iy
+      jp WhichOpLoop
 
     ; Operations: resultant vx in a, vf in d (if changed)
-    _EQ:     ; vx = vy
-        ld a,c
-        jp _OperationEnd
-    _OR:     ; vx |= vy
-        ld a,b
-        or c
-        jp _OperationEnd
-    _AND:    ; vx &= vy
-        ld a,b
-        and c
-        jp _OperationEnd
-    _XOR:    ; vx ^= vy
-        ld a,b
-        xor c
-        jp _OperationEnd
-    _ADD:    ; vx += vy; set vf
-        ld d,0  ; reset vf
-        ld a,b
-        add a,c
-        jp nc,_OperationEnd
-        ld d,1
-        jp _OperationEnd
-    _SUB:    ; vx -= vy; vf = !borrow
-        ld d,0
-        ld a,b
-        sub c
-        jp c,_OperationEnd
-        ld d,1
-        jp _OperationEnd
-    _SHR:    ; vx >>= 1; vf = shifted out bit
-        ld d,0
-        ld a,b
-        srl a
-        jp nc,_OperationEnd
-        ld d,1
-        jp _OperationEnd
-    _SUBN:   ; vx = vy - vx; vf = !borrow
-        ld d,0
-        ld a,c
-        sub b
-        jp c,_OperationEnd
-        ld d,1
-        jp _OperationEnd
-    _SHL:    ; vx <<= 1; vf = shifted out bit
-        ld d,0
-        ld a,b
-        sla a
-        jp nc,_OperationEnd
-        ld d,1
-        jp _OperationEnd
-    _NOP:
-        jp _OperationEnd
+_EQ:     ; vx = vy
+      ld a,c
+      jp _OperationEnd
+_OR:     ; vx |= vy
+      ld a,b
+      or c
+      jp _OperationEnd
+_AND:    ; vx &= vy
+      ld a,b
+      and c
+      jp _OperationEnd
+_XOR:    ; vx ^= vy
+      ld a,b
+      xor c
+      jp _OperationEnd
+_ADD:    ; vx += vy; set vf
+      ld d,0  ; reset vf
+      ld a,b
+      add a,c
+      jp nc,_OperationEnd
+      ld d,1
+      jp _OperationEnd
+_SUB:    ; vx -= vy; vf = !borrow
+      ld d,0
+      ld a,b
+      sub c
+      jp c,_OperationEnd
+      ld d,1
+      jp _OperationEnd
+_SHR:    ; vx >>= 1; vf = shifted out bit
+      ld d,0
+      ld a,b
+      srl a
+      jp nc,_OperationEnd
+      ld d,1
+      jp _OperationEnd
+_SUBN:   ; vx = vy - vx; vf = !borrow
+      ld d,0
+      ld a,c
+      sub b
+      jp c,_OperationEnd
+      ld d,1
+      jp _OperationEnd
+_SHL:    ; vx <<= 1; vf = shifted out bit
+      ld d,0
+      ld a,b
+      sla a
+      jp nc,_OperationEnd
+      ld d,1
+      jp _OperationEnd
+_NOP:
+    ; fall through
 
-    _OperationEnd:
-        pop hl
-        ld (hl),a   ; Store vx
-        ld a,d
-        ld (C8Registers+$f),a
-        jp DecodeFinished
+_OperationEnd:
+    pop hl
+    ld (hl),a   ; Store vx
+    ld a,d
+    ld (C8Registers+$f),a
+    jp DecodeFinished
 
 C89:    ; SNE   9xy0    Skip next instruction if vx != vy
     call RegInHL
@@ -847,10 +850,10 @@ C89:    ; SNE   9xy0    Skip next instruction if vx != vy
     call RegInHL
     ld a,(hl)
     cp b            ; compare with vx
-    jp z,+
+    jp z,DecodeFinished
     inc ix          ; skip next instruction
     inc ix
-  +:jp DecodeFinished
+    jp DecodeFinished
 
 C8a:    ; LD I  annn    Load register I with nnn
     and $0f
@@ -911,25 +914,25 @@ GetRandomNumber:
 */
 ; New method: stolen from Phantasy Star
     push hl
-        ld hl,(C8RandomSR)
-        ld a,h         ; get high byte
-        rrca           ; rotate right by 2
-        rrca
-        xor h          ; xor with original
-        rrca           ; rotate right by 1
-        xor l          ; xor with low byte
-        rrca           ; rotate right by 4
-        rrca
-        rrca
-        rrca
-        xor l          ; xor again
-        rra            ; rotate right by 1 through carry
-        adc hl,hl      ; add C8RandomSR to itself
-        jr nz,+
-        ld hl,$733c    ; if last xor resulted in zero then re-seed random number generator
-      +:ld a,r         ; r = refresh register = semi-random number
-        xor l          ; xor with l which is fairly random
-        ld (C8RandomSR),hl
+      ld hl,(C8RandomSR)
+      ld a,h         ; get high byte
+      rrca           ; rotate right by 2
+      rrca
+      xor h          ; xor with original
+      rrca           ; rotate right by 1
+      xor l          ; xor with low byte
+      rrca           ; rotate right by 4
+      rrca
+      rrca
+      rrca
+      xor l          ; xor again
+      rra            ; rotate right by 1 through carry
+      adc hl,hl      ; add C8RandomSR to itself
+      jr nz,+
+      ld hl,$733c    ; if last xor resulted in zero then re-seed random number generator
++:    ld a,r         ; r = refresh register = semi-random number
+      xor l          ; xor with l which is fairly random
+      ld (C8RandomSR),hl
     pop hl
     ret                ; return random number in a
 
@@ -964,25 +967,23 @@ C8d:    ; DRW   dxyn    Draw n-line sprite at I at location in vx,vy with collis
     ld b,a          ; b = number of lines in sprite
     ld iy,C8Registers+$f    ; carry flag location for XORPixel
     ld (iy+0),0             ; reset collision flag
-    -:
-        ld c,8      ; c = number of pixels per line (8)
-        ld a,(hl)   ; value of line
-        --:
-            rla         ; rotate left into carry
-            call c,XORPixel ; if it's a 1 then draw it
-            inc d       ; move right 1 pixel
-            dec c       ; Repeat c times
-            jp nz,--
+-:  ld c,8      ; c = number of pixels per line (8)
+    ld a,(hl)   ; value of line
+--: rla         ; rotate left into carry
+    call c,XORPixel ; if it's a 1 then draw it
+    inc d       ; move right 1 pixel
+    dec c       ; Repeat c times
+    jp nz,--
 
-        inc hl      ; move to next line's definition
-        push af
-            ld a,d      ; move back to original x
-            sub 8
-            ld d,a
-        pop af
-        inc e       ; move to next row
-        dec b       ; Repeat b times
-        jp nz,-
+    inc hl      ; move to next line's definition
+    push af
+      ld a,d      ; move back to original x
+      sub 8
+      ld d,a
+    pop af
+    inc e       ; move to next row
+    dec b       ; Repeat b times
+    jp nz,-
 
     jp DecodeFinished
 
@@ -992,76 +993,76 @@ XORPixel:
     push bc
     push af
 
-    ; I want a tile number and pixel number for the tile, ie.
-    ; tn = ((x/2) + 32*(y/2)) * 2 + ScreenBuffer
-    ; pn = 1<<(x%2) + 1<<(y%2 + 2)
-    ; de = xy
+      ; I want a tile number and pixel number for the tile, ie.
+      ; tn = ((x/2) + 32*(y/2)) * 2 + ScreenBuffer
+      ; pn = 1<<(x%2) + 1<<(y%2 + 2)
+      ; de = xy
 
-    ; Wrap around screen
-/*    ld a,d
-    and 63
-    ld d,a
-    ld a,e
-    and 31
-    ld e,a
+      ; Wrap around screen
+/*      ld a,d
+      and 63
+      ld d,a
+      ld a,e
+      and 31
+      ld e,a
 */
-    ; Don't draw offscreen
-    ld a,d
-    and %11000000
-    jp nz,_SkipPixel
-    ld a,e
-    and %11100000
-    jp nz,_SkipPixel
+      ; Don't draw offscreen
+      ld a,d
+      and %11000000
+      jp nz,_SkipPixel
+      ld a,e
+      and %11100000
+      jp nz,_SkipPixel
 
-    ld hl,0
-    ld b,0
-    ld c,d      ; bc = x
-    srl c       ; bc = x/2
-    add hl,bc   ; hl = x/2
+      ld hl,0
+      ld b,0
+      ld c,d      ; bc = x
+      srl c       ; bc = x/2
+      add hl,bc   ; hl = x/2
 
-    ld b,0
-    ld c,e      ; bc = y
-    res 0,c     ; bc = 2*(y/2)
-    sla c       ; x4
-    sla c       ; x8
-    sla c       ; x16
-    rl b
-    sla c       ; x32
-    rl b
-    add hl,bc   ; hl = x/2 + 32*(y/2)
+      ld b,0
+      ld c,e      ; bc = y
+      res 0,c     ; bc = 2*(y/2)
+      sla c       ; x4
+      sla c       ; x8
+      sla c       ; x16
+      rl b
+      sla c       ; x32
+      rl b
+      add hl,bc   ; hl = x/2 + 32*(y/2)
 
-    sla l
-    rl h        ; hl = (x/2 + 32*(y/2)) * 2
+      sla l
+      rl h        ; hl = (x/2 + 32*(y/2)) * 2
 
-    ld bc,ScreenBuffer
-    add hl,bc   ; hl = (x/2 + 32*(y/2)) * 2 + ScreenBuffer
+      ld bc,ScreenBuffer
+      add hl,bc   ; hl = (x/2 + 32*(y/2)) * 2 + ScreenBuffer
 
-    ld b,0
-    bit 0,d         ; z if x%2=0 -> 1000; 0100 otherwise
-    jp z,+
-    set 2,b
-    jp ++
-  +:set 3,b
- ++:bit 0,e         ; z if y%2=0 -> correct; >>2 otherwise
-    jp z,+
-    sra b
-    sra b
-  +:
+      ld b,0
+      bit 0,d         ; z if x%2=0 -> 1000; 0100 otherwise
+      jp z,+
+      set 2,b
+      jp ++
++:    set 3,b
+++:   bit 0,e         ; z if y%2=0 -> correct; >>2 otherwise
+      jp z,+
+      sra b
+      sra b
++:
 
-    ; Now hl = tile location in buffer and b = XOR for pixel
-    ld a,(hl)
-    push af
+      ; Now hl = tile location in buffer and b = XOR for pixel
+      ld a,(hl)
+      push af
         and b   ; Are any of the pixels I want already set?
         jp z,+
         ld (iy+0),1
-  +:pop af
-    xor b
-    ld (hl),a
-    ld a,1
-    inc hl
-    ld (hl),a
++:    pop af
+      xor b
+      ld (hl),a
+      ld a,1
+      inc hl
+      ld (hl),a
 
-    _SkipPixel:
+      _SkipPixel:
 
     pop af
     pop bc
@@ -1077,43 +1078,41 @@ C8e:    ; SKP/SKNP  Enxx    Skip next instruction if key in Vn is (xx=9e)/is not
     jp z,_SKNP
     jp DecodeFinished
 
-    _SKP:
-        ld a,(ix+0)         ; get 1st byte of instruction = En
-        call GetRegValue    ; now a=value in Vn
-        and $0f             ; ignore high nibble
-        ld hl,(C8Input)     ; Get input in hl
-        ; Rotate hl by a bits
-      -:cp 0    ; Is a 0?
-        jp z,+  ; Break out if it is
-        srl h   ; Else rotate hl by 1 bit
-        rr  l
-        dec a
-        jp -
-      +:
-        bit 0,l ; Is lowest bit set?
-        jp z,DecodeFinished ; If it isn't (z), it's not pressed -> don't skip
-        inc ix
-        inc ix
-      +:jp DecodeFinished
+_SKP:
+    ld a,(ix+0)         ; get 1st byte of instruction = En
+    call GetRegValue    ; now a=value in Vn
+    and $0f             ; ignore high nibble
+    ld hl,(C8Input)     ; Get input in hl
+    ; Rotate hl by a bits
+-:  or a    ; Is a 0?
+    jp z,+  ; Break out if it is
+    srl h   ; Else rotate hl by 1 bit
+    rr  l
+    dec a
+    jp -
++:  bit 0,l ; Is lowest bit set?
+    jp z,DecodeFinished ; If it isn't (z), it's not pressed -> don't skip
+    inc ix
+    inc ix
+    jp DecodeFinished
 
-    _SKNP:
-        ld a,(ix+0)         ; get 1st byte of instruction = En
-        call GetRegValue    ; now a=value in Vn
-        and $0f             ; ignore high nibble
-        ld hl,(C8Input)     ; Get input in hl
-        ; Rotate hl by a bits
-      -:cp 0    ; Is a 0?
-        jp z,+  ; Break out if it is
-        srl h   ; Else rotate hl by 1 bit
-        rr  l
-        dec a
-        jp -
-      +:
-        bit 0,l ; Is lowest bit set?
-        jp nz,DecodeFinished ; If it is (nz), it's pressed -> don't skip
-        inc ix
-        inc ix
-      +:jp DecodeFinished
+_SKNP:
+    ld a,(ix+0)         ; get 1st byte of instruction = En
+    call GetRegValue    ; now a=value in Vn
+    and $0f             ; ignore high nibble
+    ld hl,(C8Input)     ; Get input in hl
+    ; Rotate hl by a bits
+-:  or a    ; Is a 0?
+    jp z,+  ; Break out if it is
+    srl h   ; Else rotate hl by 1 bit
+    rr  l
+    dec a
+    jp -
++:  bit 0,l ; Is lowest bit set?
+    jp nz,DecodeFinished ; If it is (nz), it's pressed -> don't skip
+    inc ix
+    inc ix
+    jp DecodeFinished
 
 C8f:    ; Various
     call RegInHL
@@ -1138,150 +1137,156 @@ C8f:    ; Various
     cp $65
     jp z,_MEMTOREGS
 
-    _LD_Vx_DT:  ; vx = DT
-        ld a,(C8DelayTimer)
-        ld (hl),a
-        jp DecodeFinished
-    _LD_Vx_K:   ; Wait for a key to be pressed, vx = key
-        ; Update screen
-        call ScreenBufferToScreen
-      -:ld de,(C8Input) ; Get current input state
-        push ix
-        push iy
-        push hl
-        push de
-        call ProcessInput
-        pop de
-        pop hl
-        pop iy
-        pop ix
-        ld bc,(C8Input)
+_LD_Vx_DT:  ; vx = DT
+    ld a,(C8DelayTimer)
+    ld (hl),a
+    jp DecodeFinished
+    
+_LD_Vx_K:   ; Wait for a key to be pressed, vx = key
+    ; Update screen
+    call ScreenBufferToScreen
+-:  ld de,(C8Input) ; Get current input state
+    push ix
+    push iy
+    push hl
+    push de
+    call ProcessInput
+    pop de
+    pop hl
+    pop iy
+    pop ix
+    ld bc,(C8Input)
 
 .if debug == 1
-        push hl
-        ld hl,NameTableAddress+2*(32*20+14)
-        call VRAMToHL
-        pop hl
-        ld a,d
-        call WriteNumber
-        ld a,e
-        call WriteNumber
+    push hl
+      ld hl,NameTableAddress+2*(32*20+14)
+      call VRAMToHL
+    pop hl
+    ld a,d
+    call WriteNumber
+    ld a,e
+    call WriteNumber
 .endif
 
-        ; bc = new, de = old
-        ; I want to loop unless there's a 1 in bc which isn't in de
-        ; I want bc=bc&(!de)>0
-        ld a,d
-        cpl
-        and b
-        ld b,a
-        ld a,e
-        cpl
-        and c
-        ld c,a
-        ; See if bc contains any 1s
-        or b
-        jp z,-
+    ; bc = new, de = old
+    ; I want to loop unless there's a 1 in bc which isn't in de
+    ; I want bc=bc&(!de)>0
+    ld a,d
+    cpl
+    and b
+    ld b,a
+    ld a,e
+    cpl
+    and c
+    ld c,a
+    ; See if bc contains any 1s
+    or b
+    jp z,-
 
         ; OK, we have a key... which one changed?
 .if debug == 1
-        push hl
-        ld hl,NameTableAddress+2*(32*20+24)
-        call VRAMToHL
-        pop hl
-        ld a,b
-        call WriteNumber
-        ld a,c
-        call WriteNumber
+    push hl
+      ld hl,NameTableAddress+2*(32*20+24)
+      call VRAMToHL
+    pop hl
+    ld a,b
+    call WriteNumber
+    ld a,c
+    call WriteNumber
 .endif
 
-        ld a,0
-        -:
-        bit 0,c
-        jp nz,+
-        ; Not this one?
-        srl b
-        rr c
-        inc a
-        jp -
-        +:
-        ; a = key number
-        ld (hl),a
-        jp DecodeFinished
-    _LD_DT_Vx:  ; DT = vx
-        ld a,(hl)
-        ld (C8DelayTimer),a
-        jp DecodeFinished
-    _LD_ST_Vx:  ; ST = vx
-        ld a,(hl)
-        ld (C8SoundTimer),a
-        jp DecodeFinished
-    _ADD_I_VX:  ; I += vx
-        ld b,0
-        ld c,(hl)
-        ld hl,(C8I)
-        add hl,bc
-        ld (C8I),hl
-        jp DecodeFinished
-    _LD_F_Vx:   ; Set I to point to a 5x4 sprite representing vx
-                ; I = 5*vx (for me anyway)
-        ld a,(hl)   ; vx
-        and $0f     ; low nibble only
-        ld b,a
-        sla a       ; vx*2
-        sla a       ; vx*4
-        add a,b     ; vx*5
-        ld b,0
-        ld c,a
-        ld (C8I),bc
-        jp DecodeFinished
-    _LD_B_Vx:   ; Set 3 bytes from I to BCD value of vx
-        ld a,(hl)   ; Get value
-        ld iy,C8Game
-        ld bc,(C8I)
-        add iy,bc   ; Get where to write
-        ld b,0      ; Digit counter
-      -:cp 100      ; Is it more than 100?
-        jp c,+      ; If not, move on
-        sub 100
-        inc b
-        jp -
-      +:ld (iy+0),b
-        ld b,0      ; Repeat with 10
-      -:cp 10
-        jp c,+
-        sub 10
-        inc b
-        jp -
-      +:ld (iy+1),b
-        ld (iy+2),a ; I'm left with the 1s in a
-        jp DecodeFinished
-    _REGSTOMEM:     ; Copy x+1 registers into RAM from I
-        ld hl,C8Game
-        ld bc,(C8I)
-        add hl,bc
-        push hl
-        pop de              ; to
-        ld hl,C8Registers   ; from
-        ld a,(ix+0)
-        and $0f
-        inc a
-        ld b,0
-        ld c,a              ; how many
-        ldir
-        jp DecodeFinished
-    _MEMTOREGS:
-        ld hl,C8Game
-        ld bc,(C8I)
-        add hl,bc           ; from
-        ld de,C8Registers   ; to
-        ld a,(ix+0)
-        and $0f
-        inc a
-        ld b,0
-        ld c,a              ; how many
-        ldir
-        jp DecodeFinished
+    xor a
+-:  bit 0,c
+    jp nz,+
+    ; Not this one?
+    srl b
+    rr c
+    inc a
+    jp -
++:  ; a = key number
+    ld (hl),a
+    jp DecodeFinished
+
+_LD_DT_Vx:  ; DT = vx
+    ld a,(hl)
+    ld (C8DelayTimer),a
+    jp DecodeFinished
+
+_LD_ST_Vx:  ; ST = vx
+    ld a,(hl)
+    ld (C8SoundTimer),a
+    jp DecodeFinished
+
+_ADD_I_VX:  ; I += vx
+    ld b,0
+    ld c,(hl)
+    ld hl,(C8I)
+    add hl,bc
+    ld (C8I),hl
+    jp DecodeFinished
+
+_LD_F_Vx:   ; Set I to point to a 5x4 sprite representing vx
+            ; I = 5*vx (for me anyway)
+    ld a,(hl)   ; vx
+    and $0f     ; low nibble only
+    ld b,a
+    sla a       ; vx*2
+    sla a       ; vx*4
+    add a,b     ; vx*5
+    ld b,0
+    ld c,a
+    ld (C8I),bc
+    jp DecodeFinished
+
+_LD_B_Vx:   ; Set 3 bytes from I to BCD value of vx
+    ld a,(hl)   ; Get value
+    ld iy,C8Game
+    ld bc,(C8I)
+    add iy,bc   ; Get where to write
+    ld b,0      ; Digit counter
+-:  cp 100      ; Is it more than 100?
+    jp c,+      ; If not, move on
+    sub 100
+    inc b
+    jp -
++:  ld (iy+0),b
+    ld b,0      ; Repeat with 10
+-:  cp 10
+    jp c,+
+    sub 10
+    inc b
+    jp -
++:  ld (iy+1),b
+    ld (iy+2),a ; I'm left with the 1s in a
+    jp DecodeFinished
+
+_REGSTOMEM:     ; Copy x+1 registers into RAM from I
+    ld hl,C8Game
+    ld bc,(C8I)
+    add hl,bc
+    push hl
+    pop de              ; to
+    ld hl,C8Registers   ; from
+    ld a,(ix+0)
+    and $0f
+    inc a
+    ld b,0
+    ld c,a              ; how many
+    ldir
+    jp DecodeFinished
+
+_MEMTOREGS:
+    ld hl,C8Game
+    ld bc,(C8I)
+    add hl,bc           ; from
+    ld de,C8Registers   ; to
+    ld a,(ix+0)
+    and $0f
+    inc a
+    ld b,0
+    ld c,a              ; how many
+    ldir
+    jp DecodeFinished
 .ends
 
 ;==============================================================
@@ -1290,7 +1295,7 @@ C8f:    ; Various
 .section "Data" SEMIFREE
 VdpData:
 .db %00000100,$80
-;    |||||||`- Disable synch
+;    |||||||`- Disable sync
 ;    ||||||`-- Enable extra height modes
 ;    |||||`--- SMS mode instead of SG
 ;    ||||`---- Shift sprites left 8 pixels
@@ -1323,38 +1328,31 @@ VdpDataEnd:
 ; My chosen palette
 ;==============================================================
 PaletteData:
-.db clRGB010,clRGB333,clRGB000,clRGB111,clRGB222,clRGB121,clRGB232
-PaletteDataEnd:
+.incbin "images/palette.bin"
 
 .incdir "Images"
 
-Font:
-.include "Verdana.inc"
-ControlIcons:
-.include "Control icons.inc"
+Graphics:
+.incbin "graphics.png.tiles.zx7"
+
+LogoTilemap:
+.incbin "graphics.png.tilemap.bin" skip 16*9*2
 
 .define NumTileSets 6
 TileSets:
 .dw TVTiles,LCDTiles,StrangeTiles,InsertNameHere,Checked,Scanlines
 TVTiles:
-.include "tiles.inc"
+.incbin "tiles1.png.tiles.zx7"
 LCDTiles:
-.include "LCD.inc"
+.incbin "tiles2.png.tiles.zx7"
 StrangeTiles:
-.include "tiles2.inc"
+.incbin "tiles3.png.tiles.zx7"
 InsertNameHere:
-.include "tiles3.inc"
+.incbin "tiles4.png.tiles.zx7"
 Checked:
-.include "tiles4.inc"
+.incbin "tiles5.png.tiles.zx7"
 Scanlines:
-.include "tiles5.inc"
-
-.incdir ""
-
-LogoTileNums:
-.include "Logo (tile numbers).inc"
-
-nop    ; in case I left any trailing labels which need something to point at
+.incbin "tiles6.png.tiles.zx7"
 
 .ends
 
@@ -1497,186 +1495,187 @@ GameText:
 .dw D01,D02,D03,D04,D05,D06,D07,D08,D09,D10,D11,D12,D13,D14,D15,D16,D17,D18,D19,D20,D21,D22,D23,D24,D25,D26,D27,D28,D29,D30
 D01:
 ;    123456789012345678901234567890 ; 30 for TV cutting off sides
-; UDLR12 = ‚ƒ€„…
-.db "Blinky",10
-.db "A Pac-Man clone. Eat dots;",10
-.db "avoid ghosts; eat power pills",10
-.db "to eat ghosts.",10
-.db "‚ƒ€ to move.",0
+; UDLR12 = ´¸«»¹²
+
+.asc "Blinky",10
+.asc "A Pac-Man clone. Eat dots;",10
+.asc "avoid ghosts; eat power pills",10
+.asc "to eat ghosts.",10
+.asc "´¸«» to move.",0
 D02:
-.db "Blitz",10
-.db "Bomber clone. Bomb all the",10
-.db "towers before your plane",10
-.db "flies too low.",10
-.db "„ to drop a bomb.",0
+.asc "Blitz",10
+.asc "Bomber clone. Bomb all the",10
+.asc "towers before your plane",10
+.asc "flies too low.",10
+.asc "¹ to drop a bomb.",0
 D03:
-.db "Breakout",10
-.db "Break the bricks with your",10
-.db "ball."10
+.asc "Breakout",10
+.asc "Break the bricks with your",10
+.asc "ball."10
 .db 10
-.db "€ to move.",0
+.asc "«» to move.",0
 D04:
-.db "Brix",10
-.db "A Breakout clone - break the",10
-.db "bricks with your ball.",10
+.asc "Brix",10
+.asc "A Breakout clone - break the",10
+.asc "bricks with your ball.",10
 .db 10
-.db "€ to move.",0
+.asc "«» to move.",0
 D05:
-.db "Cave",10
-.db "Manoeuvre through the cave",10
-.db "without hitting the walls.",10
+.asc "Cave",10
+.asc "Manoeuvre through the cave",10
+.asc "without hitting the walls.",10
 .db 10
-.db "„ to start, ‚ƒ€ to move.",0
+.asc "¹ to start, ´¸«» to move.",0
 D06:
-.db "Chip-8 Logo",10
-.db "Draws a picture.",10
+.asc "Chip-8 Logo",10
+.asc "Draws a picture.",10
 .db 10
 .db 10
-.db "No controls.",0
+.asc "No controls.",0
 D07:
-.db "Connect 4          (2 players)",10
-.db "Make 4 in a row to win.",10
+.asc "Connect 4          (2 players)",10
+.asc "Make 4 in a row to win.",10
 .db 10
 .db 10
-.db "€ to move, „ to drop a coin.",0
+.asc "«» to move, ¹ to drop a coin.",0
 D08:
-.db "Filter",10
-.db "Catch the falling blocks.",10
+.asc "Filter",10
+.asc "Catch the falling blocks.",10
 .db 10
 .db 10
-.db "€ to move.",0
+.asc "«» to move.",0
 D09:
-.db "Guess",10
-.db "Think of a number from 0 to",10
-.db "62. The game will guess your",10
-.db "number!",10
-.db "„ if it's shown, … if not.",0
+.asc "Guess",10
+.asc "Think of a number from 0 to",10
+.asc "62. The game will guess your",10
+.asc "number!",10
+.asc "¹ if it's shown, ² if not.",0
 D10:
-.db "Hidden!",10
-.db "Find pairs of matching cards.",10
+.asc "Hidden!",10
+.asc "Find pairs of matching cards.",10
 .db 10
 .db 10
-.db "‚ƒ€ to move, „ to turn card.",0
+.asc "´¸«» to move, ¹ to turn card.",0
 D11:
-.db "IBM Logo",10
-.db "Draws a picture.",10
+.asc "IBM Logo",10
+.asc "Draws a picture.",10
 .db 10
 .db 10
-.db "No controls.",0
+.asc "No controls.",0
 D12:
-.db "Kaleidoscope",10
-.db "Draws a pattern based on your",10
-.db "input.",10
+.asc "Kaleidoscope",10
+.asc "Draws a pattern based on your",10
+.asc "input.",10
 .db 10
-.db "‚ƒ€ to draw, „ to finish.",0
+.asc "´¸«» to draw, ¹ to finish.",0
 D13:
-.db "Maze",10
-.db "Draws a random maze pattern.",10
+.asc "Maze",10
+.asc "Draws a random maze pattern.",10
 .db 10
 .db 10
-.db "No controls.",0
+.asc "No controls.",0
 D14:
-.db "Merlin",10
-.db "Simon clone. Repeat the",10
-.db "pattern it shows to progress.",10
-.db "€‚ to select",10
-.db "ƒ a square.",0
+.asc "Merlin",10
+.asc "Simon clone. Repeat the",10
+.asc "pattern it shows to progress.",10
+.asc "«´ to select",10
+.asc "¸» a square.",0
 D15:
-.db "Missile",10
-.db "You have 10 shots to hit 8",10
-.db "targets for 5 points each.",10
+.asc "Missile",10
+.asc "You have 10 shots to hit 8",10
+.asc "targets for 5 points each.",10
 .db 10
-.db "„ to fire.",0
+.asc "¹ to fire.",0
 D16:
-.db "Pong               (2 players)",10
-.db "Bounce the ball past your",10
-.db "opponent's paddle to win a",10
-.db "point.",10
-.db "‚ƒ to move.",0
+.asc "Pong               (2 players)",10
+.asc "Bounce the ball past your",10
+.asc "opponent's paddle to win a",10
+.asc "point.",10
+.asc "´¸ to move.",0
 D17:
-.db "Pong 2             (2 players)",10
-.db "Bounce the ball past your",10
-.db "opponent's paddle to win a",10
-.db "point.",10
-.db "‚ƒ to move.",0
+.asc "Pong 2             (2 players)",10
+.asc "Bounce the ball past your",10
+.asc "opponent's paddle to win a",10
+.asc "point.",10
+.asc "´¸ to move.",0
 D18:
-.db "Puzzle",10
-.db "Try to rearrange the tiles",10
-.db "back to the original order.",10
+.asc "Puzzle",10
+.asc "Try to rearrange the tiles",10
+.asc "back to the original order.",10
 .db 10
-.db "‚ƒ€ to move a tile.",0
+.asc "´¸«» to move a tile.",0
 D19:
-.db "Rocket",10
-.db "Realistic space simulation.",10
+.asc "Rocket",10
+.asc "Realistic space simulation.",10
 .db 10
 .db 10
-.db "„ to blast off.",0
+.asc "¹ to blast off.",0
 D20:
-.db "Space Invaders",10
-.db "Stop the alien invasion!",10
+.asc "Space Invaders",10
+.asc "Stop the alien invasion!",10
 .db 10
 .db 10
-.db "€ to move, „ to fire.",0
+.asc "«» to move, ¹ to fire.",0
 D21:
-.db "Squash",10
-.db "See how long it takes to lose",10
-.db "5 super-fast balls.",10
+.asc "Squash",10
+.asc "See how long it takes to lose",10
+.asc "5 super-fast balls.",10
 .db 10
-.db "‚ƒ to move.",0
+.asc "´¸ to move.",0
 D22:
-.db "Syzygy",10
-.db "Eat food for points, but don't",10
-.db "eat yourself!",10
-.db "„=no border, …=border.",10
-.db "‚ƒ€ to move.",0
+.asc "Syzygy",10
+.asc "Eat food for points, but don't",10
+.asc "eat yourself!",10
+.asc "¹=no border, ²=border.",10
+.asc "´¸«» to move.",0
 D23:
-.db "Tank",10
-.db "Shoot the target with 25",10
-.db "bombs. Lose 5 every time it",10
-.db "touches you.",10
-.db "‚ƒ€ to move, „ to fire.",0
+.asc "Tank",10
+.asc "Shoot the target with 25",10
+.asc "bombs. Lose 5 every time it",10
+.asc "touches you.",10
+.asc "´¸«» to move, ¹ to fire.",0
 D24:
-.db "Tapeworm",10
-.db "Like Tron, only with only",10
-.db "one player so it's quite",10
-.db "pointless.",10
-.db "‚ƒ€ to change direction.",0
+.asc "Tapeworm",10
+.asc "Like Tron, only with only",10
+.asc "one player so it's quite",10
+.asc "pointless.",10
+.asc "´¸«» to change direction.",0
 D25:
-.db "Tetris",10
-.db "Make a solid horizontal line,",10
-.db "it will disappear for 1 point",10
-.db "€ to move,",10
-.db "„ to rotate, ƒ to drop.",0
+.asc "Tetris",10
+.asc "Make a solid horizontal line,",10
+.asc "it will disappear for 1 point",10
+.asc "«» to move,",10
+.asc "¹ to rotate, ¸ to drop.",0
 D26:
-.db "UFO",10
-.db "Shoot the UFOs. The smaller",10
-.db "one is worth more points, and",10
-.db "you only have 15 shots.",10
-.db "€‚ to fire.",0
+.asc "UFO",10
+.asc "Shoot the UFOs. The smaller",10
+.asc "one is worth more points, and",10
+.asc "you only have 15 shots.",10
+.asc "«´» to fire.",0
 D27:
-.db "Vers               (2 players)",10
-.db "Tron clone. Don't hit the",10
-.db "wall, your track or your",10
-.db "opponent's track.",10
-.db "‚ƒ€ to move.",0
+.asc "Vers               (2 players)",10
+.asc "Tron clone. Don't hit the",10
+.asc "wall, your track or your",10
+.asc "opponent's track.",10
+.asc "´¸«» to move.",0
 D28:
-.db "Vertical Brix",10
-.db "Breakout clone, buggy",10
-.db "sometimes. Break the bricks",10
-.db "with your ball.",10
-.db "‚ƒ to move.",0
+.asc "Vertical Brix",10
+.asc "Breakout clone, buggy",10
+.asc "sometimes. Break the bricks",10
+.asc "with your ball.",10
+.asc "´¸ to move.",0
 D29:
-.db "Wall",10
-.db "See how many times you can",10
-.db "return the super-fast ball.",10
+.asc "Wall",10
+.asc "See how many times you can",10
+.asc "return the super-fast ball.",10
 .db 10
-.db "‚ƒ to move.",0
+.asc "´¸ to move.",0
 D30:
-.db "Wipeoff",10
-.db "Difficult Breakout clone",10
-.db "Break the bricks with your",10
-.db "ball.",10
-.db "€ to move.",0
+.asc "Wipeoff",10
+.asc "Difficult Breakout clone",10
+.asc "Break the bricks with your",10
+.asc "ball.",10
+.asc "«» to move.",0
 
 GameLocations:
 ; An array of NumGames+1 words giving the start location of each game
@@ -1756,7 +1755,7 @@ EndOfFile       db  ; 1 = don't scroll any more
 TextScroller:
     ld hl,_TextData
 
-    ld a,0  ; vscroll
+    xor a  ; vscroll
     ld (ScrollValue),a
     ld (EndOfFile),a
     ld a,25
@@ -1784,37 +1783,37 @@ TextScroller:
 
     jp _MainScrollLoop
 
-    _ScrollDown:
-      ld a,(EndOfFile)
-      cp 0
-      jp nz,_MainScrollLoop
+_ScrollDown:
+    ld a,(EndOfFile)
+    or a
+    jp nz,_MainScrollLoop
 
-      ld a,(ScrollValue)
-      inc a
-      cp 224
-      jp nz,+
-      ld a,0
-      +:
-      ld (ScrollValue),a
-      out ($bf),a
-      ld a,$89
-      out ($bf),a
+    ld a,(ScrollValue)
+    inc a
+    cp 224
+    jp nz,+
+    xor a
+    +:
+    ld (ScrollValue),a
+    out ($bf),a
+    ld a,$89
+    out ($bf),a
 
-      ld a,(ScrollValue)
-      and 7
-      jp nz,_MainScrollLoop
+    ld a,(ScrollValue)
+    and 7
+    jp nz,_MainScrollLoop
 
-      ld a,(NextLine)    ; increment other line counter
-      inc a
-      cp 28
-      jp nz,+
-      ld a,0
-      +:
-      ld (NextLine),a
+    ld a,(NextLine)    ; increment other line counter
+    inc a
+    cp 28
+    jp nz,+
+    xor a
+    +:
+    ld (NextLine),a
 
-      ld b,a
-      call _WriteLine
-      jp _MainScrollLoop
+    ld b,a
+    call _WriteLine
+    jp _MainScrollLoop
 
 _WriteLine:
 ; draw up to 32 chars to screen row b
@@ -1822,57 +1821,56 @@ _WriteLine:
 ; fill with blanks after LF (10)
     push af
     push bc
-    push hl
-      ld h,b
-      ld l,0  ; hl = b*256
-      srl h   ; >>2 so hl=b*64
-      rr l
-      srl h
-      rr l
-      ld bc,NameTableAddress
-      add hl,bc ; add NameTableAddress, now hl = VRAM location for line
+      push hl
+        ld h,b
+        ld l,0  ; hl = b*256
+        srl h   ; >>2 so hl=b*64
+        rr l
+        srl h
+        rr l
+        ld bc,NameTableAddress
+        add hl,bc ; add NameTableAddress, now hl = VRAM location for line
 
-      ; add 2 to avoid the leftmost column
+        ; add 2 to avoid the leftmost column
+        inc hl
+        inc hl
+
+        call VRAMToHL
+      pop hl
+
+      ld c,32+2
+-:    ; Read char
+      ld a,(hl)
+      or a
+      jp nz,+
+      ld a,1
+      ld (EndOfFile),a
++:    cp 10
+      jp z,_LF  ; end at LF
+      sub $20
+      jp c,_NextChar  ; skip control chars
+      out ($be),a
+      push ix ; VDP delay
+      pop ix
+      xor a
+      out ($be),a
+_NextChar:
       inc hl
-      inc hl
-
-      call VRAMToHL
-    pop hl
-
-    ld c,32+2
-    -:  ; Read char
-    ld a,(hl)
-    cp 0
-    jp nz,+
-    ld a,1
-    ld (EndOfFile),a
-    +:
-    cp 10
-    jp z,_LF  ; end at LF
-    sub $20
-    jp c,_NextChar  ; skip control chars
-    out ($be),a
-    push ix ; VDP delay
-    pop ix
-    ld a,0
-    out ($be),a
-    _NextChar:
-    inc hl
-    dec c
-    jp nz,-
+      dec c
+      jp nz,-
 
     pop bc
     pop af
     ret
 
-    _LF:    ; output blanks to the end of the line. c = number left to do. If c=32 then don't?
-    ld a,c
-    cp 32
-    jp z,_NextChar
+_LF:    ; output blanks to the end of the line. c = number left to do. If c=32 then don't?
+      ld a,c
+      cp 32
+      jp z,_NextChar
 
-    ld a,0
-    sla c   ; c*2
-    -:
+      xor a
+      sla c   ; c*2
+-:
       push ix
       pop ix
       out ($be),a
@@ -1884,12 +1882,12 @@ _WriteLine:
 _EndScroll:
     call TurnOffScreen
     ; reset VScroll
-    ld a,0
+    xor a
     out ($bf),a
     ld a,$89
     out ($bf),a
     ; wait for button not to be pressed
-  -:in a,($dc)
+-:  in a,($dc)
     and %00111111
     cp  %00111111
     jp nz,-
@@ -1911,16 +1909,15 @@ ClearVRAM:
     push hl
     push bc
     push af
-        ld hl,0
-        call VRAMToHL
-        ld bc, $4000    ; Counter for 16KB of VRAM
-        ld a,$00        ; Value to write
-        _Loop:
-            out ($BE),a ; Output to VRAM address, which is auto-incremented after each write
-            dec c
-            jp nz,_Loop
-            dec b
-            jp nz,_Loop
+      ld hl,0
+      call VRAMToHL
+      ld bc, 16*1024  ; Counter for 16KB of VRAM
+-:    xor a           ; Value to write
+      out ($BE),a     ; Output to VRAM address, which is auto-incremented after each write
+      dec bc
+      ld a,b
+      or c
+      jp nz,-
     pop af
     pop bc
     pop hl
@@ -1936,97 +1933,16 @@ ClearVRAM:
 ;==============================================================
 .section "Palette loader" FREE
 LoadPalette:
-	push af
-	push bc
-	push hl
-	    ld a,c
-	    out ($bf),a     ; Palette index
-	    ld a,$c0
-	    out ($bf),a     ; Palette write identifier
-	    ld c,$be
-	    otir            ; Output b bytes starting at hl to port c
-	pop hl
-	pop bc
-	pop af
-    ret
-.ends
-
-;==============================================================
-; Tile loader
-; Parameters:
-; hl = tile number to start at
-; ix = location of tile data
-; bc = No. of tiles to load
-; d  = bits per pixel
-;==============================================================
-.section "Tile loader" FREE
-LoadTiles:
     push af
     push bc
-    push de
     push hl
-    push ix
-        ; Tell VDP where I want to write (hl<<5)
-        sla l
-        rl h
-        sla l
-        rl h
-        sla l
-        rl h
-        sla l
-        rl h
-        sla l
-        rl h
-        ld a,l
-        out ($bf),a
-        ld a,h
-        or $40
-        out ($bf),a
-
-        ; I need to output bc*8 bytes so I need to modify bc (<<3)
-        sla c
-        rl b
-        sla c
-        rl b
-        sla c
-        rl b
-
-        ; Write data
-        _Loop:
-            ; Restore counter
-            ld e,d
-
-            _DataLoop:
-                ; Write byte
-                ld a,(ix+0)
-                out ($be),a
-                dec e
-                inc ix
-                jp nz,_DataLoop
-
-            ; Restore counter
-            ld e,d
-            _BlankLoop:
-                ; Write blank data to fill up the rest of the tile definition
-                inc e
-                ld a,e
-                cp 5
-                jp z,_NoMoreBlanks
-
-                ld a,0
-                out ($be),a
-                jp _BlankLoop
-
-            _NoMoreBlanks:
-
-            dec bc
-            ld a,b
-            or c
-            jp nz,_Loop
-
-    pop ix
+      ld a,c
+      out ($bf),a     ; Palette index
+      ld a,$c0
+      out ($bf),a     ; Palette write identifier
+      ld c,$be
+      otir            ; Output b bytes starting at hl to port c
     pop hl
-    pop de
     pop bc
     pop af
     ret
@@ -2035,10 +1951,10 @@ LoadTiles:
 .section "Turn off screen" FREE
 TurnOffScreen:
     push af
-        ld a,%10000100  ; 28 line mode
-        out ($bf),a
-        ld a,$81
-        out ($bf),a
+      ld a,%10000100  ; 28 line mode
+      out ($bf),a
+      ld a,$81
+      out ($bf),a
     pop af
     ret
 .ends
@@ -2048,16 +1964,15 @@ ClearNameTable:
     push hl
     push bc
     push af
-        ld hl,NameTableAddress
-        call VRAMToHL
-        ld bc,$700      ; for unstretched screens only!
-        ld a,$00        ; Value to write
-        -:
-            out ($BE),a ; Output to VRAM address, which is auto-incremented after each write
-            dec c
-            jp nz,-
-            dec b
-            jp nz,-
+      ld hl,NameTableAddress
+      call VRAMToHL
+      ld bc,$700      ; for unstretched screens only!
+-:    xor a           ; Value to write
+      out ($BE),a ; Output to VRAM address, which is auto-incremented after each write
+      dec bc
+      ld a,b
+      or c
+      jp nz,-
     pop af
     pop bc
     pop hl
@@ -2068,17 +1983,16 @@ ClearNameTable:
 WaitForVBlankNoInt:
     push bc
     push af
-    _Loop:
-        call GetVCount
-        cp $c1
-        jp nz,_Loop
+-:    call GetVCount
+      cp $c1
+      jp nz,-
     pop af
     pop bc
     ret
 .ends
 
 ;==============================================================
-; Image loader (bytes)
+; Tilemap loader
 ; Parameters:
 ; b  = width  (tiles)
 ; c  = height (tiles)
@@ -2087,30 +2001,31 @@ WaitForVBlankNoInt:
 ; Sets all tile flags to zero.
 ;==============================================================
 .section "Draw image" FREE
-DrawImageBytes:
+DrawTilemap:
     push af
     push bc     ; Width, height
     push de     ; Width, height counters
     push hl     ; h = high byte
     push ix     ; ROM location
     push iy     ; VRAM location
-        _DrawRow:
-            call VRAMToIY     ; Move to the right place
-            ld d,b                  ; no. of tiles to loop through per row
-            _DrawTile:
-                ld a,(ix+0)
-                out ($be),a
-                ld a,h
-                out ($be),a
-                inc ix
-                dec d
-                jp nz,_DrawTile
+_DrawRow:
+      call VRAMToIY     ; Move to the right place
+      ld d,b                  ; no. of tiles to loop through per row
+_DrawTile:
+      ld a,(ix+0)
+      inc ix
+      out ($be),a
+      ld a,(ix+0)
+      inc ix
+      out ($be),a
+      dec d
+      jp nz,_DrawTile
 
-            ld de,64                ; Move name table address
-            add iy,de
+      ld de,64                ; Move name table address
+      add iy,de
 
-            dec c
-            jp nz,_DrawRow
+      dec c
+      jp nz,_DrawRow
     pop iy
     pop ix
     pop hl
@@ -2129,9 +2044,9 @@ DrawImageBytes:
 .section "Write ASCII" FREE
 VRAMToIY:
     push hl
-    push iy
-    pop hl
-    call VRAMToHL
+      push iy
+      pop hl
+      call VRAMToHL
     pop hl
     ret
 
@@ -2139,38 +2054,38 @@ WriteASCII:
     push af
     push bc
     push hl
+      call VRAMToIY
+_WriteTilesLoop:
+      ld a,(hl)  ; Value to write
+      cp $00    ; compare a with $00, set z flag if they match
+      jp z,_WriteTilesLoopEnd  ; if so, it's the string end so stop writing it
+      cp 10    ; Check for LF
+      jp z,_NewLine
+      sub $20 ; Convert to tile index
+      jp c,_SkipControlChar
+      out ($BE),a  ; Output to VRAM address, which is auto-incremented after each write
+      ld a,%00000000
+      push hl
+      pop hl  ; delay
+      out ($BE),a
+_SkipControlChar:
+      inc hl
+      jp _WriteTilesLoop
+_NewLine:
+      ; Go to the next line, ie. next multiple of 32=$20
+      push hl
+        push iy
+        pop hl
+        ld bc,64
+        add hl,bc
+        push hl
+        pop iy
         call VRAMToIY
-    	_WriteTilesLoop:
-		    ld a,(hl)	; Value to write
-		    cp $00		; compare a with $00, set z flag if they match
-		    jp z,_WriteTilesLoopEnd	; if so, it's the string end so stop writing it
-		    cp 10		; Check for LF
-		    jp z,_NewLine
-		    sub $20
-            jp c,_SkipControlChar
-		    out ($BE),a	; Output to VRAM address, which is auto-incremented after each write
-		    ld a,%00000000
-		    push hl
-		    pop hl  ; delay
-		    out ($BE),a
-            _SkipControlChar:
-		    inc hl
-		    jp _WriteTilesLoop
-	    _NewLine:
-		    ; Go to the next line, ie. next multiple of 32=$20
-            push hl
-                push iy
-                pop hl
-                ld bc,64
-                add hl,bc
-                push hl
-                pop iy
-                call VRAMToIY
-            pop hl
-            _NoNewLine:
-		    inc hl
-		    jp _WriteTilesLoop
-	    _WriteTilesLoopEnd:
+      pop hl
+_NoNewLine:
+      inc hl
+      jp _WriteTilesLoop
+_WriteTilesLoopEnd:
     pop hl
     pop bc
     pop af
@@ -2183,105 +2098,14 @@ WriteASCII:
 .section "VRAM address to hl" FREE
 VRAMToHL:
     push af
-        ld a,l
-        out ($BF),a
-        ld a,h
-        or $40
-        out ($BF),a
+      ld a,l
+      out ($BF),a
+      ld a,h
+      or $40
+      out ($BF),a
     pop af
     ret
 .ends
-
-;==============================================================
-; Palette value definitions, for easy reference, plus some
-; nice names for some (incomplete)
-;==============================================================
-.ENUM $00
-clBlack:	   .db
-	clRGB000:	db
-clDarkestRed:  .db
-	clRGB100:	db
-clDarkRed:	   .db
-	clRGB200:	db
-clRed:		   .db
-	clRGB300:	db
-clDarkestGreen: .db
-	clRGB010:	db
-	clRGB110:	db
-	clRGB210:	db
-	clRGB310:	db
-clDarkGreen:   .db
-	clRGB020:	db
-	clRGB120:	db
-clDarkYellow:  .db
-	clRGB220:	db
-	clRGB320:	db
-clGreen:	   .db
-	clRGB030:	db
-	clRGB130:	db
-	clRGB230:	db
-clYellow:	   .db
-	clRGB330:	db
-clDarkestBlue: .db
-	clRGB001:	db
-clDarkestPurple: .db
-	clRGB101:	db
-	clRGB201:	db
-	clRGB301:	db
-	clRGB011:	db
-clDkGrey:	   .db
-	clRGB111:	db
-	clRGB211:	db
-clPaleRed:	   .db
-	clRGB311:	db
-	clRGB021:	db
-	clRGB121:	db
-	clRGB221:	db
-	clRGB321:	db
-	clRGB031:	db
-	clRGB131:	db
-	clRGB231:	db
-	clRGB331:	db
-clDarkBlue:	   .db
-	clRGB002:	db
-	clRGB102:	db
-	clRGB202:	db
-	clRGB302:	db
-	clRGB012:	db
-	clRGB112:	db
-	clRGB212:	db
-	clRGB312:	db
-	clRGB022:	db
-	clRGB122:	db
-clLtGrey:	   .db
-	clRGB222:	db
-clPink:		   .db
-	clRGB322:	db
-	clRGB032:	db
-	clRGB132:	db
-	clRGB232:	db
-	clRGB332:	db
-clBlue:		   .db
-	clRGB003:	db
-	clRGB103:	db
-	clRGB203:	db
-clMagenta:	   .db
-	clRGB303:	db
-	clRGB013:	db
-	clRGB113:	db
-	clRGB213:	db
-	clRGB313:	db
-	clRGB023:	db
-	clRGB123:	db
-	clRGB223:	db
-	clRGB323:	db
-clCyan:		   .db
-	clRGB033:	db
-	clRGB133:	db
-	clRGB233:	db
-clWhite:	   .db
-	clRGB333:	db
-.ENDE
 
 .section "Get VCount" FREE
 ;==============================================================
@@ -2291,10 +2115,9 @@ clWhite:	   .db
 ;==============================================================
 GetVCount:  ; returns scanline counter in a and b
     in a,($7e)  ; get value
-    _Loop:
-    ld b,a      ; store it
+-:  ld b,a      ; store it
     in a,($7e)  ; and again
     cp b        ; Is it the same?
-    jr nz,_Loop ; If not, repeat
+    jr nz,-     ; If not, repeat
     ret         ; If so, return it in a (and b)
 .ends

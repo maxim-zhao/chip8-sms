@@ -4,9 +4,9 @@
 
   by Maxim in 2002 and 2005
 
-   Ñ  Return to the menu
-   Ç  Stop scrolling
-   É  Scroll faster
+   É  Return to the menu
+   Å  Stop scrolling
+   Ç  Scroll faster
 
 What is Chip-8 anyway?
 ======================
@@ -86,10 +86,10 @@ are also some other nice games.
 Look at the list at the main
 menu. I like:
 
-Å Syzygy
-Å Blitz
-Å Tetris
-Å Pong
+Ä Syzygy
+Ä Blitz
+Ä Tetris
+Ä Pong
 
 Controls
 ========
@@ -114,12 +114,12 @@ Press Button 2 on the title
 screen to change the graphic
 style. The styles are:
 
-Å Old TV game
-Å LCD
-Å Shadowed dots
-Å Grid with green squares
-Å Checked
-Å Scanlines
+Ä Old TV game
+Ä LCD
+Ä Shadowed dots
+Ä Grid with green squares
+Ä Checked
+Ä Scanlines
 
 Several of these are a bit
 crappy, I just drew whatever
@@ -154,19 +154,19 @@ best.
 Credits
 =======
 
-Å www.goldroad.co.uk for
+Ä www.goldroad.co.uk for
   suggesting Chip-8 as a simple
   "emulation" project
-Å David Winter for CHIP8 and
+Ä David Winter for CHIP8 and
   the comprehensive
   documentation and
   information it includes, and
   his various Chip-8 tools
   like the disassembler
-Å Cowgod for his Chip-8
+Ä Cowgod for his Chip-8
   Technical Reference which is
   a useful fast reference
-Å All the people whose game
+Ä All the people whose game
   packs I collated, and the
   original game authors
 
@@ -1583,18 +1583,22 @@ because I'm releasing it
 properly with source.
 
 New in version 0.2:
-Å Improved random number
+Ä Improved random number
   generator
-Å Improved display
-Å Improved unused register
+Ä Improved display
+Ä Improved unused register
   bits handling
-Å Changed secret text
-Å Added new games!
+Ä Changed secret text
+Ä Added new games!
 
 New in version 0.21:
 
-Å Fixed a control definition
+Ä Fixed a control definition
   error making Filter and
   Guess unplayable
 
+New in version 0.22:
+
+Ä Tidied up a bit for release 
+  on GitHub!
 

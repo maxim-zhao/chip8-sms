@@ -2,3 +2,7 @@
 *.sms
 *.sym
 Thumbs.db
+*.tilemap.bin
+*.tiles.zx7
+/src/Images/palette.bin
+*.bak
